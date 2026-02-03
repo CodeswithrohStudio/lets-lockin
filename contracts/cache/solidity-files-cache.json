@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/rohitpurkait/Work/projects_for_fun/lets-lockin/contracts/contracts/ChallengeRegistry.sol": {
-      "lastModificationDate": 1770063159580,
-      "contentHash": "12ec391aa15b94c0ac6b2f8581f6cbf2",
+      "lastModificationDate": 1770109138957,
+      "contentHash": "32f600e26748e803cd17bf622a5a8057",
       "sourceName": "contracts/ChallengeRegistry.sol",
       "solcConfig": {
         "version": "0.8.28",

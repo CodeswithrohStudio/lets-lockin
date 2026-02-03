@@ -1,58 +1,59 @@
+
 import { NextResponse } from 'next/server';
+import { ethers } from 'ethers';
+import { REGISTRY_ADDRESS, REGISTRY_ABI, RPC_URL } from '../../lib/constants';
 
-export interface Challenge {
-    id: string;
-    title: string;
-    description: string;
-    rewardTokenAmount: string;
-    durationDays: number;
-    participantsCount: number;
-    imageUrl?: string;
-    requiredSubmissions: number;
-    minStake: string;
-}
-
-const mockChallenges: Challenge[] = [
-    {
-        id: '1',
-        title: '30 Days of Code',
-        description: 'Commit code every day for 30 days. No excuses.',
-        rewardTokenAmount: '100',
-        durationDays: 30,
-        participantsCount: 156,
-        requiredSubmissions: 30,
-        minStake: '50',
-    },
-    {
-        id: '2',
-        title: 'Morning Run Streak',
-        description: 'Run 5km every morning before 8 AM.',
-        rewardTokenAmount: '50',
-        durationDays: 14,
-        participantsCount: 89,
-        requiredSubmissions: 14,
-        minStake: '20',
-    },
-    {
-        id: '3',
-        title: 'Design Daily',
-        description: 'Create one UI component every day.',
-        rewardTokenAmount: '75',
-        durationDays: 21,
-        participantsCount: 42,
-        requiredSubmissions: 21,
-        minStake: '100',
-    }
-];
+export const dynamic = 'force-dynamic'; // Ensure no caching for live data
 
 export async function GET() {
-    return NextResponse.json(mockChallenges, {
-        headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        },
-    });
+    try {
+        const provider = new ethers.JsonRpcProvider(RPC_URL);
+        const registry = new ethers.Contract(REGISTRY_ADDRESS, REGISTRY_ABI, provider);
+
+        const nextId = await registry.nextChallengeId();
+        const totalChallenges = Number(nextId);
+
+        const challenges = [];
+
+        for (let i = 0; i < totalChallenges; i++) {
+            const c = await registry.challenges(i);
+
+            // c structure: [id, metadataURI, rewardAmount, minStake, isActive]
+            if (!c.isActive) continue; // Skip inactive
+
+            let metadata = { title: `Challenge #${i}`, description: 'No metadata' };
+            try {
+                // If it's a simple JSON string (as seeded), parse it.
+                // If it's a URL, we would fetch it. 
+                // Our seed script used raw JSON string.
+                metadata = JSON.parse(c.metadataURI);
+            } catch (e) {
+                console.error("Failed to parse metadata", c.metadataURI);
+            }
+
+            challenges.push({
+                id: c.id.toString(),
+                title: metadata.title,
+                description: metadata.description,
+                rewardTokenAmount: c.rewardAmount.toString(),
+                durationDays: 30, // Mocked for now as contract doesn't store duration explicitly in struct (MVP trade-off)
+                participantsCount: 0, // Would need to query event logs to get real count
+                minStake: ethers.formatUnits(c.minStake, 6), // USDC 6 decimals
+                requiredSubmissions: 30
+            });
+        }
+
+        return NextResponse.json(challenges, {
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            },
+        });
+    } catch (error) {
+        console.error("Backend Error:", error);
+        return NextResponse.json({ error: "Failed to fetch challenges" }, { status: 500 });
+    }
 }
 
 export async function OPTIONS() {
@@ -61,6 +62,7 @@ export async function OPTIONS() {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Access-Control-Max-Age': '86400',
         },
     });
 }

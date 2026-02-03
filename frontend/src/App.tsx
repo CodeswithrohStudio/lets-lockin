@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import Providers from './Providers';
 import { motion, AnimatePresence } from 'framer-motion';
+import JoinButton from './components/JoinButton';
 import ThreeBackground from './ThreeBackground';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import Dashboard from './components/Dashboard';
 
 function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
@@ -12,13 +14,19 @@ function cn(...inputs: (string | undefined | null | false)[]) {
 
 // --- Components ---
 
-const Navbar = ({ onLogin, user, authenticated }: { onLogin: () => void, user: any, authenticated: boolean }) => (
+const Navbar = ({ onNavigate, user, authenticated }: { onNavigate: (view: 'landing' | 'catalog' | 'dashboard') => void, user: any, authenticated: boolean }) => (
   <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4 flex justify-between items-center backdrop-blur-md border-b border-white/5 bg-black/20">
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 cursor-pointer" onClick={() => onNavigate('landing')}>
       <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]" />
       <span className="font-mono font-bold text-lg tracking-widest text-emerald-500/80">LETS_LOCK_IN</span>
     </div>
-    <div>
+
+    <div className="flex items-center gap-6">
+      <button onClick={() => onNavigate('catalog')} className="text-sm font-mono text-slate-300 hover:text-white transition-colors uppercase">Catalog</button>
+      {authenticated && (
+        <button onClick={() => onNavigate('dashboard')} className="text-sm font-mono text-slate-300 hover:text-white transition-colors uppercase">Dashboard</button>
+      )}
+
       {authenticated ? (
         <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/10">
           <div className="w-2 h-2 bg-green-500 rounded-full" />
@@ -28,8 +36,8 @@ const Navbar = ({ onLogin, user, authenticated }: { onLogin: () => void, user: a
         </div>
       ) : (
         <button
-          onClick={onLogin}
-          className="group relative px-6 py-2 bg-white text-black font-bold font-mono text-sm uppercase tracking-wide overflow-hidden hover:bg-emerald-400 transition-colors duration-300"
+          // Login handled by Privy hook or specific button
+          className="group relative px-6 py-2 bg-white text-black font-bold font-mono text-sm uppercase tracking-wide overflow-hidden hover:bg-emerald-400 transition-colors duration-300 pointer-events-none opacity-50"
         >
           <span className="relative z-10">Connect System</span>
         </button>
@@ -89,47 +97,44 @@ const ChallengeCard = ({ challenge }: { challenge: any }) => (
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     whileHover={{ y: -5 }}
-    className="group relative bg-[#0a0a0a] border border-white/10 rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-colors duration-500"
+    className="group relative bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-all duration-500 shadow-xl"
   >
     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
     <div className="p-8 relative z-10">
       <div className="flex justify-between items-start mb-6">
-        <h3 className="text-2xl font-bold text-white group-hover:text-emerald-400 transition-colors">{challenge.title}</h3>
-        <span className="text-xs font-mono text-slate-500 border border-slate-800 px-2 py-1 rounded bg-black/50">
+        <h3 className="text-2xl font-bold text-white group-hover:text-emerald-400 transition-colors drop-shadow-sm">{challenge.title}</h3>
+        <span className="text-xs font-mono text-slate-400 border border-slate-700/50 px-2 py-1 rounded bg-black/40 backdrop-blur-sm">
           ID: {challenge.id.padStart(3, '0')}
         </span>
       </div>
 
-      <p className="text-slate-400 mb-8 min-h-[3rem] line-clamp-2 leading-relaxed">
+      <p className="text-slate-300/80 mb-8 min-h-[3rem] line-clamp-2 leading-relaxed font-light">
         {challenge.description}
       </p>
 
       <div className="grid grid-cols-3 gap-2 mb-8">
-        <div className="bg-white/5 p-3 rounded-lg border border-white/5">
-          <p className="text-[10px] text-slate-500 mb-1 uppercase tracking-wider">Reward</p>
+        <div className="bg-white/5 backdrop-blur-sm p-3 rounded-lg border border-white/5 group-hover:border-white/10 transition-colors">
+          <p className="text-[10px] text-slate-400 mb-1 uppercase tracking-wider">Reward</p>
           <p className="text-sm font-mono text-emerald-400 font-bold">{challenge.rewardTokenAmount} USDC</p>
         </div>
-        <div className="bg-white/5 p-3 rounded-lg border border-white/5">
-          <p className="text-[10px] text-slate-500 mb-1 uppercase tracking-wider">Stake</p>
+        <div className="bg-white/5 backdrop-blur-sm p-3 rounded-lg border border-white/5 group-hover:border-white/10 transition-colors">
+          <p className="text-[10px] text-slate-400 mb-1 uppercase tracking-wider">Stake</p>
           <p className="text-sm font-mono text-rose-400 font-bold">{challenge.minStake || '0'} USDC</p>
         </div>
-        <div className="bg-white/5 p-3 rounded-lg border border-white/5">
-          <p className="text-[10px] text-slate-500 mb-1 uppercase tracking-wider">Duration</p>
-          <p className="text-sm font-mono text-white">{challenge.durationDays} Days</p>
+        <div className="bg-white/5 backdrop-blur-sm p-3 rounded-lg border border-white/5 group-hover:border-white/10 transition-colors">
+          <p className="text-[10px] text-slate-400 mb-1 uppercase tracking-wider">Duration</p>
+          <p className="text-sm font-mono text-slate-200">{challenge.durationDays} Days</p>
         </div>
       </div>
 
-      <button className="w-full py-4 bg-emerald-500/10 text-emerald-500 font-bold uppercase tracking-wider hover:bg-emerald-500 hover:text-black transition-all duration-300 rounded-lg border border-emerald-500/20">
-        Stake & Join Protocol
-      </button>
+      <JoinButton challengeId={challenge.id} minStake={challenge.minStake || '0'} refetch={() => console.log('Refetching...')} />
     </div>
   </motion.div>
 );
 
-const Catalog = () => {
+const CatalogContent = () => {
   const [challenges, setChallenges] = useState<any[]>([]);
-  const { login, authenticated, user } = usePrivy();
 
   useEffect(() => {
     fetch('http://localhost:3000/api/challenges')
@@ -139,68 +144,78 @@ const Catalog = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#030712] relative">
-      <ThreeBackground className="fixed inset-0 pointer-events-none" />
-      <Navbar onLogin={login} user={user} authenticated={authenticated} />
+    <div className="pt-32 pb-20 px-6 max-w-7xl mx-auto">
+      <div className="mb-16">
+        <motion.h2
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="text-4xl md:text-5xl font-bold text-white mb-4"
+        >
+          ACTIVE PROTOCOLS
+        </motion.h2>
+        <motion.div
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ delay: 0.2, duration: 0.8 }}
+          className="h-1 w-32 bg-emerald-500 origin-left"
+        />
+      </div>
 
-      <div className="relative z-10 pt-32 pb-20 px-6 max-w-7xl mx-auto">
-        <div className="mb-16">
-          <motion.h2
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="text-4xl md:text-5xl font-bold text-white mb-4"
-          >
-            ACTIVE PROTOCOLS
-          </motion.h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {challenges.map((c, i) => (
           <motion.div
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ delay: 0.2, duration: 0.8 }}
-            className="h-1 w-32 bg-emerald-500 origin-left"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {challenges.map((c, i) => (
-            <motion.div
-              key={c.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 + 0.3 }}
-            >
-              <ChallengeCard challenge={c} />
-            </motion.div>
-          ))}
-        </div>
+            key={c.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 + 0.3 }}
+          >
+            <ChallengeCard challenge={c} />
+          </motion.div>
+        ))}
       </div>
     </div>
   );
 };
 
 function AppContent() {
-  const [view, setView] = useState<'landing' | 'catalog'>('landing');
+  const [view, setView] = useState<'landing' | 'catalog' | 'dashboard'>('landing');
+  const { login, authenticated, user } = usePrivy();
 
   return (
-    <AnimatePresence mode="wait">
-      {view === 'landing' ? (
-        <motion.div
-          key="landing"
-          exit={{ opacity: 0, y: -50 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Hero onEnter={() => setView('catalog')} />
-        </motion.div>
-      ) : (
-        <motion.div
-          key="catalog"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Catalog />
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <div className="min-h-screen bg-[#030712] relative">
+      <ThreeBackground className="fixed inset-0 pointer-events-none" />
+      <Navbar onNavigate={setView} user={user} authenticated={authenticated} />
+
+      <AnimatePresence mode="wait">
+        {view === 'landing' ? (
+          <motion.div
+            key="landing"
+            exit={{ opacity: 0, y: -50 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Hero onEnter={() => setView('catalog')} />
+          </motion.div>
+        ) : view === 'catalog' ? (
+          <motion.div
+            key="catalog"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <CatalogContent />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="dashboard"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Dashboard />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 

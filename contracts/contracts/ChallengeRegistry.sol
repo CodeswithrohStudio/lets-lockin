@@ -22,6 +22,8 @@ contract ChallengeRegistry is Ownable {
     mapping(uint256 => mapping(address => bool)) public hasJoined;
     // Mapping from challengeId -> user -> stakedAmount
     mapping(uint256 => mapping(address => uint256)) public userStakes;
+    // Mapping from challengeId -> user -> hasSubmitted
+    mapping(uint256 => mapping(address => bool)) public hasSubmitted;
 
     IERC20 public paymentToken;
 
@@ -42,26 +44,28 @@ contract ChallengeRegistry is Ownable {
         emit ChallengeCreated(challengeId, metadataURI, rewardAmount, minStake);
     }
 
-    function joinChallenge(uint256 challengeId) external {
+    function joinChallenge(uint256 challengeId, uint256 stakeAmount) external {
         Challenge memory challenge = challenges[challengeId];
         require(challenge.isActive, "Challenge not active");
         require(!hasJoined[challengeId][msg.sender], "Already joined");
+        require(stakeAmount >= challenge.minStake, "Stake too low");
         
-        uint256 stake = challenge.minStake;
-        if (stake > 0) {
-            bool success = paymentToken.transferFrom(msg.sender, address(this), stake);
+        if (stakeAmount > 0) {
+            bool success = paymentToken.transferFrom(msg.sender, address(this), stakeAmount);
             require(success, "Stake transfer failed");
-            userStakes[challengeId][msg.sender] = stake;
+            userStakes[challengeId][msg.sender] = stakeAmount;
         }
 
         hasJoined[challengeId][msg.sender] = true;
-        emit UserJoined(challengeId, msg.sender, stake);
+        emit UserJoined(challengeId, msg.sender, stakeAmount);
     }
 
     function submitProof(uint256 challengeId, string memory proofURI) external {
         require(hasJoined[challengeId][msg.sender], "Not a participant");
         require(challenges[challengeId].isActive, "Challenge ended");
+        require(!hasSubmitted[challengeId][msg.sender], "Proof already submitted");
         
+        hasSubmitted[challengeId][msg.sender] = true;
         emit ProofSubmitted(challengeId, msg.sender, proofURI);
     }
 
